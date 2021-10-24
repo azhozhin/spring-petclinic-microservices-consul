@@ -1,7 +1,10 @@
 spring:
   cloud:
-    config:
-      uri: http://localhost:8888
+    consul:
+      host: localhost
+      port: 8500
+      config:
+        format: yaml
   application:
     name: api-gateway
 ---
@@ -10,5 +13,6 @@ spring:
     activate:
       on-profile: docker
   cloud:
-    config:
-      uri: http://config-server:8888
+    consul:
+      host: consul
+      port: 8500

@@ -1,99 +1,94 @@
 version: '2'
 
 services:
-  config-server:
-    image: springcommunity/spring-petclinic-config-server
-    container_name: config-server
-    mem_limit: 512M
-    ports:
-     - 8888:8888
 
-  discovery-server:
-    image: springcommunity/spring-petclinic-discovery-server
-    container_name: discovery-server
+  consul:
+    image: consul
+    container_name: consul
     mem_limit: 512M
-    depends_on:
-      - config-server
-    entrypoint: ["./dockerize","-wait=tcp://config-server:8888","-timeout=60s","--","java", "org.springframework.boot.loader.JarLauncher"]
     ports:
-     - 8761:8761
+     - "8500:8500"
+     - "8300:8300"
 
   customers-service:
     image: springcommunity/spring-petclinic-customers-service
     container_name: customers-service
+    environment:
+     - SPRING_PROFILES_ACTIVE=docker
     mem_limit: 512M
     depends_on:
-     - config-server
-     - discovery-server
-    entrypoint: ["./dockerize","-wait=tcp://discovery-server:8761","-timeout=60s","--","java", "org.springframework.boot.loader.JarLauncher"]
-    ports:
-    - 8081:8081
+      - consul
+      - tracing-server
+    entrypoint: ["./dockerize","-timeout=60s","--","java", "org.springframework.boot.loader.JarLauncher"]
 
   visits-service:
     image: springcommunity/spring-petclinic-visits-service
     container_name: visits-service
+    environment:
+     - SPRING_PROFILES_ACTIVE=docker
     mem_limit: 512M
     depends_on:
-     - config-server
-     - discovery-server
-    entrypoint: ["./dockerize","-wait=tcp://discovery-server:8761","-timeout=60s","--","java", "org.springframework.boot.loader.JarLauncher"]
-    ports:
-     - 8082:8082
+      - consul
+      - tracing-server
+    entrypoint: ["./dockerize","-timeout=60s","--","java", "org.springframework.boot.loader.JarLauncher"]
 
   vets-service:
     image: springcommunity/spring-petclinic-vets-service
     container_name: vets-service
+    environment:
+     - SPRING_PROFILES_ACTIVE=docker
     mem_limit: 512M
     depends_on:
-     - config-server
-     - discovery-server
-    entrypoint: ["./dockerize","-wait=tcp://discovery-server:8761","-timeout=60s","--","java", "org.springframework.boot.loader.JarLauncher"]
-    ports:
-     - 8083:8083
+      - consul
+      - tracing-server
+    entrypoint: ["./dockerize","-timeout=60s","--","java", "org.springframework.boot.loader.JarLauncher"]
 
   api-gateway:
     image: springcommunity/spring-petclinic-api-gateway
     container_name: api-gateway
+    environment:
+     - SPRING_PROFILES_ACTIVE=docker
     mem_limit: 512M
     depends_on:
-     - config-server
-     - discovery-server
-    entrypoint: ["./dockerize","-wait=tcp://discovery-server:8761","-timeout=60s","--","java", "org.springframework.boot.loader.JarLauncher"]
+      - consul
+      - tracing-server
+    entrypoint: ["./dockerize","-timeout=60s","--","java", "org.springframework.boot.loader.JarLauncher"]
     ports:
-     - 8080:8080
-
-  tracing-server:
-    image: openzipkin/zipkin
-    container_name: tracing-server
-    mem_limit: 512M
-    environment:
-    - JAVA_OPTS=-XX:+UnlockExperimentalVMOptions -Djava.security.egd=file:/dev/./urandom
-    ports:
-     - 9411:9411
+     - "8080:8080"
 
   admin-server:
     image: springcommunity/spring-petclinic-admin-server
     container_name: admin-server
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
     mem_limit: 512M
     depends_on:
-     - config-server
-     - discovery-server
-    entrypoint: ["./dockerize","-wait=tcp://discovery-server:8761","-timeout=60s","--","java", "org.springframework.boot.loader.JarLauncher"]
+      - consul
+    entrypoint: ["./dockerize","-timeout=60s","--","java", "org.springframework.boot.loader.JarLauncher"]
     ports:
-     - 9090:9090
+     - "9090:9090"
 
-  ## Grafana / Prometheus
+  ## Grafana / Prometheus / Zipkin
 
   grafana-server:
     build: ./docker/grafana
     container_name: grafana-server
     mem_limit: 256M
     ports:
-    - 3000:3000
+     - "3000:3000"
 
   prometheus-server:
     build: ./docker/prometheus
     container_name: prometheus-server
     mem_limit: 256M
     ports:
-    - 9091:9090
+     - "9091:9090"
+
+  tracing-server:
+    image: openzipkin/zipkin
+    container_name: tracing-server
+    mem_limit: 512M
+    environment:
+     - JAVA_OPTS=-XX:+UnlockExperimentalVMOptions -Djava.security.egd=file:/dev/./urandom
+    ports:
+     - "9411:9411"
